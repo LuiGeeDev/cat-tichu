@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.gitignore
+고양이
+test
+*.log
+.DS_Store
+.env
+Dockerfile
+.dockerignore
+README.md
