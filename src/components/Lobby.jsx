@@ -1,5 +1,6 @@
 import { CATS } from '../cats.js';
 import { CatAvatar, Paw, TeamChip } from './ui.jsx';
+import { TARGET_OPTIONS } from '../../shared/tichu/engine.js';
 
 export default function Lobby({ view, onAction, onLeave, onOpenRules, onCopyInvite, status }) {
   const me = view.players.find((p) => p.isMe);
@@ -110,6 +111,29 @@ export default function Lobby({ view, onAction, onLeave, onOpenRules, onCopyInvi
               </button>
             );
           })}
+        </div>
+      </section>
+
+      <section className="panel lobby__target">
+        <div className="lobby__target-head">
+          <h2>목표 점수</h2>
+          <span className="hint">
+            {view.isHost ? '원하는 점수를 골라 주세요.' : '방장이 목표 점수를 정합니다.'}
+          </span>
+          <span className="target-badge">{view.target}점</span>
+        </div>
+        <div className="target-options">
+          {TARGET_OPTIONS.map((score) => (
+            <button
+              key={score}
+              type="button"
+              className={`target-option ${view.target === score ? 'is-selected' : ''}`}
+              disabled={!view.isHost}
+              onClick={() => onAction({ type: 'setTarget', target: score })}
+            >
+              {score}점
+            </button>
+          ))}
         </div>
       </section>
 

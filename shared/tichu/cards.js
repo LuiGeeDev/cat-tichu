@@ -2,7 +2,7 @@
  * 티츄 카드 정의
  * 공식 룰(Fata Morgana, Tichu Nanking 4인) 기준 56장 덱.
  * - 일반 카드 52장: 4무늬(옥/검/탑/별) × 2~A
- * - 특수 카드 4장: 마작(Mah Jong), 개(Dog), 봉새(Phoenix), 용(Dragon)
+ * - 특수 카드 4장: 참새(Mah Jong), 개(Dog), 봉황(Phoenix), 용(Dragon)
  */
 
 export const SUITS = ['jade', 'sword', 'pagoda', 'star'];
@@ -40,9 +40,9 @@ export const KIND = {
 };
 
 export const SPECIAL_LABEL = {
-  [KIND.MAHJONG]: '마작',
+  [KIND.MAHJONG]: '참새',
   [KIND.DOG]: '개',
-  [KIND.PHOENIX]: '봉새',
+  [KIND.PHOENIX]: '봉황',
   [KIND.DRAGON]: '용',
 };
 
@@ -61,7 +61,7 @@ export function buildDeck() {
   return deck;
 }
 
-/** 카드 점수: 5=5, 10=10, K=10, 용=25, 봉새=-25 */
+/** 카드 점수: 5=5, 10=10, K=10, 용=25, 봉황=-25 */
 export function cardPoints(card) {
   if (!card) return 0;
   if (card.kind === KIND.DRAGON) return 25;

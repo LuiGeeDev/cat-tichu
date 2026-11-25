@@ -3,7 +3,7 @@
  */
 
 import crypto from 'node:crypto';
-import { createGame, applyAction, viewFor, PHASE } from '../shared/tichu/engine.js';
+import { createGame, applyAction, viewFor, PHASE, TARGET_OPTIONS, TARGET_SCORE } from '../shared/tichu/engine.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ROOM_TTL = 1000 * 60 * 60 * 6; // 6시간
@@ -69,6 +69,7 @@ export class RoomStore {
       code,
       players: [],
       game: null,
+      target: TARGET_SCORE,
       hostSeat: 0,
       banned: new Set(),
       createdAt: Date.now(),
@@ -169,6 +170,15 @@ export class RoomStore {
     room.lastActive = Date.now();
 
     switch (action.type) {
+      case 'setTarget': {
+        this.requireHost(room, player);
+        if (room.game) throw new StoreError('게임 중에는 목표 점수를 바꿀 수 없습니다.');
+        const target = Number(action.target);
+        if (!TARGET_OPTIONS.includes(target)) throw new StoreError('선택할 수 없는 목표 점수입니다.');
+        room.target = target;
+        break;
+      }
+
       case 'setCat': {
         if (room.game) throw new StoreError('게임 중에는 고양이를 바꿀 수 없습니다.');
         const catId = Number(action.catId);
@@ -184,7 +194,10 @@ export class RoomStore {
         this.requireHost(room, player);
         if (room.game) throw new StoreError('이미 시작했습니다.');
         if (room.players.length !== MAX_PLAYERS) throw new StoreError('4명이 모여야 시작할 수 있습니다.');
-        room.game = createGame(room.players.map((p) => ({ seat: p.seat, name: p.name, catId: p.catId })));
+        room.game = createGame(
+          room.players.map((p) => ({ seat: p.seat, name: p.name, catId: p.catId })),
+          { target: room.target },
+        );
         break;
       }
 
@@ -242,6 +255,7 @@ export class RoomStore {
       return {
         phase: PHASE.LOBBY,
         roomCode: room.code,
+        target: room.target,
         mySeat: player.seat,
         isHost: room.hostSeat === player.seat,
         hostSeat: room.hostSeat,

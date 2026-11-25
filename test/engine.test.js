@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { buildDeck, cardsPoints, KIND, sortHand } from '../shared/tichu/cards.js';
 import { analyze, beats, legalPlays, validatePlay, TYPE } from '../shared/tichu/combinations.js';
-import { applyAction, createGame, PHASE } from '../shared/tichu/engine.js';
+import { applyAction, createGame, viewFor, PHASE } from '../shared/tichu/engine.js';
 
 const deck = buildDeck();
 const byId = new Map(deck.map((c) => [c.id, c]));
@@ -45,13 +45,13 @@ test('폭탄 판정', () => {
   assert.equal(flush.bombKind, 'straightFlush');
 });
 
-test('마작은 1로 스트레이트에 들어간다', () => {
+test('참새는 1로 스트레이트에 들어간다', () => {
   const c = combo(['mahjong', 'jade-2', 'sword-3', 'star-4', 'pagoda-5']);
   assert.equal(c.type, TYPE.STRAIGHT);
   assert.equal(c.rank, 5);
 });
 
-test('봉새는 와일드 카드로 쓰인다', () => {
+test('봉황은 와일드 카드로 쓰인다', () => {
   const pair = combo(['phoenix', 'jade-8']);
   assert.equal(pair.type, TYPE.PAIR);
   assert.equal(pair.rank, 8);
@@ -59,16 +59,21 @@ test('봉새는 와일드 카드로 쓰인다', () => {
   const straight = combo(['phoenix', 'jade-5', 'sword-6', 'star-7', 'pagoda-9']);
   assert.equal(straight.type, TYPE.STRAIGHT);
   assert.equal(straight.rank, 9);
+  assert.deepEqual(
+    straight.cards.map((c) => c.id),
+    ['jade-5', 'sword-6', 'star-7', 'phoenix', 'pagoda-9'],
+    '봉황은 대신한 숫자(8) 위치에 표시된다',
+  );
 
   const full = combo(['phoenix', 'jade-5', 'sword-5', 'star-5', 'pagoda-9']);
   assert.equal(full.type, TYPE.FULLHOUSE);
   assert.equal(full.rank, 5);
 
-  // 봉새로는 폭탄을 만들 수 없다
+  // 봉황으로는 폭탄을 만들 수 없다
   assert.equal(analyze(hand('phoenix', 'jade-9', 'sword-9', 'star-9')).length, 0);
 });
 
-test('봉새 싱글은 앞 카드보다 0.5 높다', () => {
+test('봉황 싱글은 앞 카드보다 0.5 높다', () => {
   const phoenix = combo(['phoenix']);
   const ace = combo(['jade-14']);
   const dragon = combo(['dragon']);
@@ -218,7 +223,7 @@ test('티츄 성공/실패 점수', () => {
   assert.deepEqual(game.scores, [100, -100]);
 });
 
-test('용으로 스틱을 이기면 상대에게 넘긴다', () => {
+test('용으로 트릭을 이기면 상대에게 넘긴다', () => {
   const game = gameInPlay([['dragon'], ['jade-2'], ['jade-3'], ['jade-4']], { turn: 0 });
 
   applyAction(game, 0, { type: 'play', cards: ['dragon'] });
@@ -246,7 +251,7 @@ test('개는 파트너에게 선을 넘긴다', () => {
   assert.equal(game.hands[0].length, 1);
 });
 
-test('세 번 패스하면 스틱이 끝난다', () => {
+test('세 번 패스하면 트릭이 끝난다', () => {
   const game = gameInPlay(
     [['jade-14', 'jade-2'], ['jade-3'], ['jade-4'], ['jade-5']],
     { turn: 0 },
@@ -258,6 +263,28 @@ test('세 번 패스하면 스틱이 끝난다', () => {
   applyAction(game, 3, { type: 'pass' });
 
   assert.equal(game.piles[0].length, 1);
-  assert.equal(game.turn, 0, '스틱을 가져간 사람이 다시 선');
+  assert.equal(game.turn, 0, '트릭을 가져간 사람이 다시 선');
   assert.equal(game.table, null);
+});
+
+test('목표 점수를 설정할 수 있다', () => {
+  const players = [0, 1, 2, 3].map((seat) => ({ seat, name: `p${seat}`, catId: seat + 1 }));
+  assert.equal(createGame(players).target, 1000);
+  assert.equal(createGame(players, { target: 500 }).target, 500);
+  assert.equal(createGame(players, { target: 2000 }).target, 2000);
+  assert.equal(createGame(players, { target: 777 }).target, 1000, '허용되지 않은 값은 기본값');
+  assert.equal(viewFor(createGame(players, { target: 1500 }), 0).target, 1500);
+});
+
+test('내가 가져간 트릭 카드와 점수만 나에게 보인다', () => {
+  const players = [0, 1, 2, 3].map((seat) => ({ seat, name: `p${seat}`, catId: seat + 1 }));
+  const game = createGame(players);
+  game.piles[0].push(card('jade-5'), card('dragon'));
+
+  const mine = viewFor(game, 0);
+  const other = viewFor(game, 1);
+  assert.equal(mine.myPile.length, 2);
+  assert.equal(other.myPile.length, 0);
+  assert.equal(mine.players[0].pileCount, 2);
+  assert.equal(mine.players[0].pilePoints, 30);
 });

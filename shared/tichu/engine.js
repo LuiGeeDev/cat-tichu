@@ -11,12 +11,13 @@ export const PHASE = {
   GRAND: 'grand', // 8장 배분, 그랜드 티츄 선언
   EXCHANGE: 'exchange', // 카드 3장 교환
   PLAYING: 'playing',
-  DRAGON: 'dragon', // 용의 스틱을 상대에게 넘기는 중
+  DRAGON: 'dragon', // 용의 트릭을 상대에게 넘기는 중
   ROUND_END: 'roundEnd',
   GAME_OVER: 'gameOver',
 };
 
 export const TARGET_SCORE = 1000;
+export const TARGET_OPTIONS = [500, 1000, 1500, 2000];
 
 export class GameError extends Error {}
 
@@ -45,12 +46,13 @@ function requirePhase(state, ...phases) {
   if (!phases.includes(state.phase)) fail('지금은 할 수 없는 동작입니다.');
 }
 
-export function createGame(players) {
+export function createGame(players, { target = TARGET_SCORE } = {}) {
+  const safeTarget = TARGET_OPTIONS.includes(Number(target)) ? Number(target) : TARGET_SCORE;
   const state = {
     version: 0,
     round: 0,
     phase: PHASE.LOBBY,
-    target: TARGET_SCORE,
+    target: safeTarget,
     scores: [0, 0],
     players: players.map((p) => ({ seat: p.seat, name: p.name, catId: p.catId })),
     hands: [[], [], [], []],
@@ -144,7 +146,7 @@ function applyExchange(state) {
 
   state.hands = nextHands.map(sortHand);
   state.phase = PHASE.PLAYING;
-  addLog(state, '카드 교환이 끝났습니다. 마작을 가진 사람이 먼저 냅니다.', null, 'round');
+  addLog(state, '카드 교환이 끝났습니다. 참새을 가진 사람이 먼저 냅니다.', null, 'round');
 
   const mjSeat = [0, 1, 2, 3].find((s) => state.hands[s].some((c) => c.kind === KIND.MAHJONG));
   state.turn = mjSeat ?? 0;
@@ -169,7 +171,7 @@ function describeCombo(combo) {
   if (!combo) return '';
   if (combo.type === TYPE.SINGLE) {
     if (combo.dragon) return '용';
-    if (combo.phoenix) return '봉새';
+    if (combo.phoenix) return '봉황';
     return cardLabel(combo.cards[0]);
   }
   if (combo.type === TYPE.BOMB) {
@@ -187,7 +189,7 @@ function finishSeat(state, seat) {
   addLog(state, `${nameOf(state, seat)}님 ${place}등으로 아웃!`, seat, 'out');
 }
 
-/** 스틱 종료: 마지막으로 낸 사람이 스틱을 가져간다 (용은 예외) */
+/** 트릭 종료: 마지막으로 낸 사람이 트릭을 가져간다 (용은 예외) */
 function endTrick(state) {
   const table = state.table;
   const cards = [...state.trickCards];
@@ -199,12 +201,12 @@ function endTrick(state) {
   if (table.combo.dragon) {
     state.phase = PHASE.DRAGON;
     state.pendingGift = { by: table.seat, cards };
-    addLog(state, `${nameOf(state, table.seat)}님이 용으로 스틱을 이겼습니다. 상대에게 넘길 상대를 선택하세요.`, table.seat, 'dragon');
+    addLog(state, `${nameOf(state, table.seat)}님이 용으로 트릭을 이겼습니다. 상대에게 넘길 상대를 선택하세요.`, table.seat, 'dragon');
     return;
   }
 
   state.piles[table.seat].push(...cards);
-  addLog(state, `${nameOf(state, table.seat)}님이 스틱을 가져갔습니다.`, table.seat, 'trick');
+  addLog(state, `${nameOf(state, table.seat)}님이 트릭을 가져갔습니다.`, table.seat, 'trick');
 
   if (state.hands[table.seat].length > 0) {
     state.turn = table.seat;
@@ -213,7 +215,7 @@ function endTrick(state) {
   }
 }
 
-/** 라운드 종료 직전, 마지막 스틱을 정리하고 점수를 계산한다 */
+/** 라운드 종료 직전, 마지막 트릭을 정리하고 점수를 계산한다 */
 function concludeRound(state) {
   const table = state.table;
   if (table) {
@@ -239,7 +241,7 @@ function finishRound(state) {
   const first = state.finishOrder[0];
   const last = state.finishOrder[3];
 
-  // 마지막 사람의 남은 카드는 상대 팀에게, 자신이 모은 스틱은 1등에게 간다.
+  // 마지막 사람의 남은 카드는 상대 팀에게, 자신이 모은 트릭은 1등에게 간다.
   const piles = state.piles.map((p) => [...p]);
   const lastHand = state.hands[last];
   const oppSeat = nextSeat(last);
@@ -323,7 +325,7 @@ function playCards(state, seat, cardIds, wish) {
   const containsMahjong = combo.cards.some((c) => c.kind === KIND.MAHJONG);
 
   if (wish != null) {
-    if (!containsMahjong) fail('마작을 낼 때만 소원을 빌 수 있습니다.');
+    if (!containsMahjong) fail('참새을 낼 때만 소원을 빌 수 있습니다.');
     if (!Number.isInteger(wish) || wish < 2 || wish > 14) fail('소원은 2부터 A까지 가능합니다.');
   }
 
@@ -376,7 +378,7 @@ function playCards(state, seat, cardIds, wish) {
 function passTurn(state, seat) {
   if (!state.table) fail('선을 잡았을 때는 패스할 수 없습니다.');
   const { mustFulfill } = legalPlays(state.hands[seat], state.table.combo, state.wish);
-  if (mustFulfill) fail('마작 소원을 지켜야 합니다. 소원 카드가 포함된 조합을 내야 합니다.');
+  if (mustFulfill) fail('참새 소원을 지켜야 합니다. 소원 카드가 포함된 조합을 내야 합니다.');
 
   state.passes += 1;
   addLog(state, `${nameOf(state, seat)}님 패스`, seat, 'pass');
@@ -393,15 +395,15 @@ function passTurn(state, seat) {
 
 function giveDragon(state, seat, targetSeat) {
   const gift = state.pendingGift;
-  if (!gift) fail('넘길 스틱이 없습니다.');
-  if (gift.by !== seat) fail('용을 낸 사람만 스틱을 넘길 수 있습니다.');
+  if (!gift) fail('넘길 트릭이 없습니다.');
+  if (gift.by !== seat) fail('용을 낸 사람만 트릭을 넘길 수 있습니다.');
   if (targetSeat !== nextSeat(seat) && targetSeat !== prevSeat(seat)) {
-    fail('상대 팀에게만 스틱을 넘길 수 있습니다.');
+    fail('상대 팀에게만 트릭을 넘길 수 있습니다.');
   }
 
   state.piles[targetSeat].push(...gift.cards);
   state.pendingGift = null;
-  addLog(state, `${nameOf(state, seat)}님이 스틱을 ${nameOf(state, targetSeat)}님에게 넘겼습니다.`, seat, 'dragon');
+  addLog(state, `${nameOf(state, seat)}님이 트릭을 ${nameOf(state, targetSeat)}님에게 넘겼습니다.`, seat, 'dragon');
 
   if (state.roundEnding) {
     state.roundEnding = false;
@@ -556,6 +558,7 @@ export function viewFor(state, seat) {
       pilePoints: cardsPoints(state.piles[i]),
     })),
     hand,
+    myPile: [...state.piles[seat]],
     mySeat: seat,
     myCall: state.calls[seat],
     hasPlayed: state.played[seat],

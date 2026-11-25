@@ -2,9 +2,9 @@ import { KIND, RANK_LABEL, cardPoints } from '../../shared/tichu/cards.js';
 import { SuitGlyph, Paw } from './ui.jsx';
 
 const SPECIAL = {
-  [KIND.MAHJONG]: { emoji: '🐦', name: '마작' },
+  [KIND.MAHJONG]: { emoji: '🐦', name: '참새' },
   [KIND.DOG]: { emoji: '🐕', name: '개' },
-  [KIND.PHOENIX]: { emoji: '🔥', name: '봉새' },
+  [KIND.PHOENIX]: { emoji: '🔥', name: '봉황' },
   [KIND.DRAGON]: { emoji: '🐉', name: '용' },
 };
 

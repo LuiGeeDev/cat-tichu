@@ -3,7 +3,7 @@ import { Card } from './Card.jsx';
 import { CatAvatar, Paw, TeamChip } from './ui.jsx';
 import { Modal } from './Modal.jsx';
 import { analyze, beats, legalPlays, comboLabel, TYPE } from '../../shared/tichu/combinations.js';
-import { KIND, RANK_LABEL } from '../../shared/tichu/cards.js';
+import { KIND, RANK_LABEL, sortHand } from '../../shared/tichu/cards.js';
 
 const RANKS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 const SLOTS = ['left', 'partner', 'right'];
@@ -81,6 +81,8 @@ export default function Game({ view, onAction, onOpenRules, onCopyInvite, status
   const left = (me + 3) % 4;
   const players = view.players;
   const myTeam = me % 2;
+  const myPileCount = view.myPile?.length ?? players[me]?.pileCount ?? 0;
+  const myPilePoints = players[me]?.pilePoints ?? 0;
 
   const [selected, setSelected] = useState([]);
   const [picks, setPicks] = useState({ left: null, partner: null, right: null });
@@ -88,6 +90,7 @@ export default function Game({ view, onAction, onOpenRules, onCopyInvite, status
   const [tichuOpen, setTichuOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [resultOpen, setResultOpen] = useState(false);
+  const [pileOpen, setPileOpen] = useState(false);
 
   const handKey = view.hand.map((c) => c.id).join(',');
   const isExchange = view.phase === 'exchange';
@@ -222,7 +225,7 @@ export default function Game({ view, onAction, onOpenRules, onCopyInvite, status
             ) : (
               <div className="mat__empty">
                 <Paw size={26} />
-                <span>{view.phase === 'playing' ? (view.isMyTurn ? '선을 잡았습니다' : '새 스틱') : '테이블'}</span>
+                <span>{view.phase === 'playing' ? (view.isMyTurn ? '선을 잡았습니다' : '새 트릭') : '테이블'}</span>
               </div>
             )}
 
@@ -244,16 +247,30 @@ export default function Game({ view, onAction, onOpenRules, onCopyInvite, status
 
       <section className="playarea">
         <div className="playarea__top">
-          <div className={`me-chip ${view.isMyTurn ? 'is-turn' : ''}`}>
+          <button
+            type="button"
+            className={`me-chip ${view.isMyTurn ? 'is-turn' : ''}`}
+            onClick={() => setPileOpen(true)}
+            title="내가 먹은 카드 보기"
+          >
             <CatAvatar catId={players[me].catId} size={34} />
             <span>{players[me].name}</span>
             <span className="me-chip__team">{myTeam === 0 ? 'A팀' : 'B팀'}</span>
+            <span className="me-chip__pile">
+              <Paw size={11} />
+              {myPileCount}
+              {myPilePoints !== 0 && (
+                <b className={myPilePoints > 0 ? 'is-plus' : 'is-minus'}>
+                  {myPilePoints > 0 ? `+${myPilePoints}` : myPilePoints}
+                </b>
+              )}
+            </span>
             {players[me].calls && (
               <span className={`badge ${players[me].calls === 'grand' ? 'badge--grand' : 'badge--tichu'}`}>
                 {players[me].calls === 'grand' ? '그랜드 티츄' : '티츄'}
               </span>
             )}
-          </div>
+          </button>
 
           {isPlaying && (
             <div className="turn-hint">
@@ -425,7 +442,7 @@ export default function Game({ view, onAction, onOpenRules, onCopyInvite, status
       <Modal
         open={wishOpen}
         onClose={() => setWishOpen(false)}
-        title="마작 소원"
+        title="참새 소원"
         subtitle="2부터 A까지 원하는 숫자를 소원할 수 있습니다."
       >
         <div className="rank-grid">
@@ -466,8 +483,8 @@ export default function Game({ view, onAction, onOpenRules, onCopyInvite, status
       <Modal
         open={Boolean(view.pendingGift)}
         dismissable={false}
-        title="용의 스틱"
-        subtitle="용으로 이긴 스틱은 상대 한 명에게 넘겨야 합니다."
+        title="용의 트릭"
+        subtitle="용으로 이긴 트릭은 상대 한 명에게 넘겨야 합니다."
       >
         {view.pendingGift?.by === me ? (
           <div className="gift-options">
@@ -487,7 +504,7 @@ export default function Game({ view, onAction, onOpenRules, onCopyInvite, status
         ) : (
           <div className="waiting-block">
             <span className="spinner" />
-            <p>{players[view.pendingGift?.by]?.name}님이 스틱을 넘길 상대를 고르는 중…</p>
+            <p>{players[view.pendingGift?.by]?.name}님이 트릭을 넘길 상대를 고르는 중…</p>
           </div>
         )}
       </Modal>
@@ -599,6 +616,35 @@ export default function Game({ view, onAction, onOpenRules, onCopyInvite, status
               )}
             </div>
           </>
+        )}
+      </Modal>
+
+      <Modal
+        open={pileOpen}
+        onClose={() => setPileOpen(false)}
+        title="내가 먹은 카드"
+        subtitle="이 라운드에서 가져간 트릭입니다. 다른 플레이어는 장수와 점수만 볼 수 있습니다."
+        className="modal--pile"
+      >
+        <div className="pile-summary">
+          <span>
+            가져간 카드 <b>{myPileCount}장</b>
+          </span>
+          <span>
+            점수{' '}
+            <b className={myPilePoints > 0 ? 'is-plus' : myPilePoints < 0 ? 'is-minus' : ''}>
+              {myPilePoints > 0 ? `+${myPilePoints}` : myPilePoints}점
+            </b>
+          </span>
+        </div>
+        {myPileCount > 0 ? (
+          <div className="pile-grid">
+            {sortHand(view.myPile ?? []).map((card) => (
+              <Card key={card.id} card={card} size="sm" />
+            ))}
+          </div>
+        ) : (
+          <p className="hint hint--center">아직 가져간 트릭이 없습니다.</p>
         )}
       </Modal>
 

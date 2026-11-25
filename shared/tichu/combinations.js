@@ -5,10 +5,10 @@
  * - 낼 수 있는 조합: 싱글, 페어, 트리플, 풀하우스(3+2), 스트레이트(5장 이상 연속),
  *   연속 페어(2쌍 이상), 폭탄(같은 숫자 4장 / 같은 무늬 5장 이상 연속)
  * - 같은 종류·같은 길이의 더 높은 조합으로만 덮을 수 있다. (폭탄은 예외)
- * - 봉새: 조합 안에서는 2~A 와일드, 싱글로 낼 때는 앞 카드보다 0.5 높음(선일 때 1.5)
- * - 용: 싱글 전용, 가장 강함, 이기면 스틱을 상대에게 준다.
+ * - 봉황: 조합 안에서는 2~A 와일드, 싱글로 낼 때는 앞 카드보다 0.5 높음(선일 때 1.5)
+ * - 용: 싱글 전용, 가장 강함, 이기면 트릭을 상대에게 준다.
  * - 개: 선으로만 낼 수 있고, 파트너에게 선을 넘긴다. (폭탄 불가)
- * - 마작: 1로 취급, 스트레이트에 포함 가능, 낼 때 소원을 빌 수 있다.
+ * - 참새: 1로 취급, 스트레이트에 포함 가능, 낼 때 소원을 빌 수 있다.
  */
 
 import { KIND, RANK_LABEL } from './cards.js';
@@ -38,9 +38,10 @@ export const TYPE_LABEL = {
 const RANK_VALUES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 
 function makeCombo(type, cards, rank, extra = {}) {
+  // cards 는 analyze 에서 조합 내 실제 순서(와일드 카드는 대신한 숫자 위치)로 정렬해 전달한다.
   return {
     type,
-    cards: [...cards].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)),
+    cards: [...cards],
     rank,
     size: cards.length,
     bomb: type === TYPE.BOMB,
@@ -76,7 +77,7 @@ function structure(ranks, cards, baseCards, usesPhoenix) {
 
   if (n === 4) {
     if (distinct.length === 1) {
-      // 봉새로는 폭탄을 만들 수 없다.
+      // 봉황으로는 폭탄을 만들 수 없다.
       if (usesPhoenix) return null;
       return makeCombo(TYPE.BOMB, cards, distinct[0], { bombKind: 'quad' });
     }
@@ -109,7 +110,7 @@ function structure(ranks, cards, baseCards, usesPhoenix) {
 
 /**
  * 선택한 카드들이 만들 수 있는 모든 조합 해석을 반환한다.
- * (봉새는 여러 값으로 해석될 수 있으므로 복수 결과 가능)
+ * (봉황은 여러 값으로 해석될 수 있으므로 복수 결과 가능)
  */
 export function analyze(cards) {
   const results = [];
@@ -137,10 +138,13 @@ export function analyze(cards) {
   const candidates = phoenix ? RANK_VALUES : [null];
 
   for (const value of candidates) {
-    const ranks = baseCards.map((c) => c.rank);
-    if (value !== null) ranks.push(value);
-    ranks.sort((a, b) => a - b);
-    const combo = structure(ranks, cards, baseCards, Boolean(phoenix));
+    // 봉황이 대신하는 숫자를 기준으로 정렬해야 화면에서도 제 자리에 보인다.
+    const entries = baseCards.map((card) => ({ card, rank: card.rank }));
+    if (phoenix) entries.push({ card: phoenix, rank: value });
+    entries.sort((a, b) => a.rank - b.rank);
+    const ranks = entries.map((entry) => entry.rank);
+    const orderedCards = entries.map((entry) => entry.card);
+    const combo = structure(ranks, orderedCards, baseCards, Boolean(phoenix));
     if (combo) results.push(combo);
   }
 
@@ -201,7 +205,7 @@ export function comboLabel(combo) {
   const base = TYPE_LABEL[combo.type] ?? '조합';
   if (combo.type === TYPE.STRAIGHT || combo.type === TYPE.STAIRS) return `${base} ${combo.size}장`;
   if (combo.type === TYPE.SINGLE && combo.dragon) return '용';
-  if (combo.type === TYPE.SINGLE && combo.phoenix) return '봉새';
+  if (combo.type === TYPE.SINGLE && combo.phoenix) return '봉황';
   return base;
 }
 
@@ -265,7 +269,7 @@ export function validatePlay(hand, cardIds, target = null, wish = null) {
   const candidates = plays.filter((p) => idsKey(p.cards) === key);
 
   if (candidates.length === 0) {
-    if (mustFulfill) return { ok: false, error: '마작 소원을 먼저 지켜야 합니다.' };
+    if (mustFulfill) return { ok: false, error: '참새 소원을 먼저 지켜야 합니다.' };
     if (!target) return { ok: false, error: '낼 수 없는 조합입니다.' };
     return { ok: false, error: '지금 조합을 덮을 수 없습니다.' };
   }

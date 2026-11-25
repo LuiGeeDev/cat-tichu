@@ -247,7 +247,7 @@ export default function App() {
         subtitle="Fata Morgana 공식 4인 룰을 한국어로 정리했습니다."
         className="modal--rules"
       >
-        <Rules />
+        <Rules target={view?.target} />
       </Modal>
 
       {toast && (
