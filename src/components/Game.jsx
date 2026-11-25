@@ -62,6 +62,7 @@ function Seat({ player, position, isTurn, isPartner, compact }) {
           {player.calls === 'grand' && <span className="badge badge--grand">그랜드</span>}
           {player.calls === 'tichu' && <span className="badge badge--tichu">티츄</span>}
           {player.place && <span className="badge badge--out">{player.place}등</span>}
+          {player.isBot && <span className="badge badge--bot">봇</span>}
           {!player.connected && <span className="badge badge--offline">끊김</span>}
           {player.pilePoints !== 0 && (
             <span className={`badge badge--points ${player.pilePoints < 0 ? 'is-negative' : ''}`}>
@@ -220,6 +221,14 @@ export default function Game({ view, onAction, onOpenRules, onCopyInvite, status
                 </div>
                 <div className="mat__caption">
                   <b>{players[view.table.seat]?.name}</b> · {view.table.label}
+                </div>
+              </div>
+            ) : view.lastDog?.version === view.version ? (
+              <div className="mat__dog" key={`dog-${view.lastDog.version}`}>
+                <Card card={view.lastDog.card} size="md" />
+                <div className="mat__dog-text">
+                  <b>🐕 {players[view.lastDog.seat]?.name}님이 개를 냈습니다!</b>
+                  <span>선이 {players[view.lastDog.to]?.name}님에게 넘어갔습니다</span>
                 </div>
               </div>
             ) : (

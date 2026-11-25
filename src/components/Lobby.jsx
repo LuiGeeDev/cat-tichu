@@ -6,6 +6,8 @@ export default function Lobby({ view, onAction, onLeave, onOpenRules, onCopyInvi
   const me = view.players.find((p) => p.isMe);
   const usedCats = new Set(view.players.map((p) => p.catId));
   const emptyCount = 4 - view.players.length;
+  const humans = view.players.filter((p) => !p.isBot).length;
+  const canToggleBot = view.isHost && (humans === 3 || view.hasBot);
   const seats = [0, 1, 2, 3];
 
   return (
@@ -61,10 +63,13 @@ export default function Lobby({ view, onAction, onLeave, onOpenRules, onCopyInvi
               <div className="seat-card__name">
                 {player.name}
                 {player.isMe && <span className="tag">나</span>}
+                {player.isBot && <span className="tag tag--bot">봇</span>}
                 {player.isHost && <span className="tag tag--host">방장</span>}
               </div>
               <div className="seat-card__status">
-                {player.connected ? (
+                {player.isBot ? (
+                  <span className="bot-status">자동 플레이</span>
+                ) : player.connected ? (
                   <span className="online">
                     <i /> 접속 중
                   </span>
@@ -72,7 +77,7 @@ export default function Lobby({ view, onAction, onLeave, onOpenRules, onCopyInvi
                   <span className="offline">연결 끊김</span>
                 )}
               </div>
-              {view.isHost && !player.isMe && (
+              {view.isHost && !player.isMe && !player.isBot && (
                 <button
                   type="button"
                   className="seat-card__kick"
@@ -138,6 +143,15 @@ export default function Lobby({ view, onAction, onLeave, onOpenRules, onCopyInvi
       </section>
 
       <footer className="lobby__footer">
+        {canToggleBot && (
+          <button
+            type="button"
+            className="btn btn--mini btn--ghost"
+            onClick={() => onAction({ type: 'setBot', enabled: !view.hasBot })}
+          >
+            {view.hasBot ? '봇 제거' : '봇으로 채우기'}
+          </button>
+        )}
         {emptyCount > 0 ? (
           <div className="lobby__waiting">
             <span className="spinner" />

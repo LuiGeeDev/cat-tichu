@@ -45,7 +45,7 @@ export class RoomStore {
     return this.rooms.get(String(code ?? '').toUpperCase()) ?? null;
   }
 
-  newPlayer(room, { name, catId }) {
+  newPlayer(room, { name, catId, isBot = false }) {
     const seat = room.players.length;
     const usedCats = new Set(room.players.map((p) => p.catId));
     const fallbackCat = CAT_IDS.find((id) => !usedCats.has(id)) ?? CAT_IDS[seat % CAT_IDS.length];
@@ -54,7 +54,8 @@ export class RoomStore {
       seat,
       name: sanitizeName(name) || `고양이${seat + 1}`,
       catId: usedCats.has(Number(catId)) ? fallbackCat : Number(catId) || fallbackCat,
-      connected: false,
+      isBot,
+      connected: isBot,
       socket: null,
       lastSeen: Date.now(),
       actionIds: [],
@@ -70,6 +71,7 @@ export class RoomStore {
       players: [],
       game: null,
       target: TARGET_SCORE,
+      bot: false,
       hostSeat: 0,
       banned: new Set(),
       createdAt: Date.now(),
@@ -133,7 +135,7 @@ export class RoomStore {
 
     // 방장이 나갔으면 남아있는 사람에게 위임
     if (room.hostSeat === player.seat) {
-      const next = room.players.find((p) => p.connected && p.seat !== player.seat);
+      const next = room.players.find((p) => p.connected && !p.isBot && p.seat !== player.seat);
       if (next) room.hostSeat = next.seat;
     }
   }
@@ -170,6 +172,32 @@ export class RoomStore {
     room.lastActive = Date.now();
 
     switch (action.type) {
+      case 'setBot': {
+        this.requireHost(room, player);
+        if (room.game) throw new StoreError('게임 중에는 봇을 바꿀 수 없습니다.');
+        const want = Boolean(action.enabled);
+        if (want === room.bot) break;
+        if (want) {
+          if (room.players.length !== 3) {
+            throw new StoreError('세 명이 모였을 때만 봇을 추가할 수 있습니다.');
+          }
+          const used = new Set(room.players.map((p) => p.catId));
+          const catId = CAT_IDS.find((id) => !used.has(id)) ?? CAT_IDS[CAT_IDS.length - 1];
+          this.newPlayer(room, { name: '봇', catId, isBot: true });
+          room.bot = true;
+        } else {
+          const bot = room.players.find((p) => p.isBot);
+          if (bot) {
+            room.players.splice(room.players.indexOf(bot), 1);
+            room.players.forEach((p, i) => {
+              p.seat = i;
+            });
+          }
+          room.bot = false;
+        }
+        break;
+      }
+
       case 'setTarget': {
         this.requireHost(room, player);
         if (room.game) throw new StoreError('게임 중에는 목표 점수를 바꿀 수 없습니다.');
@@ -256,6 +284,7 @@ export class RoomStore {
         phase: PHASE.LOBBY,
         roomCode: room.code,
         target: room.target,
+        hasBot: room.bot,
         mySeat: player.seat,
         isHost: room.hostSeat === player.seat,
         hostSeat: room.hostSeat,
@@ -265,6 +294,7 @@ export class RoomStore {
           name: p.name,
           catId: p.catId,
           connected: p.connected,
+          isBot: Boolean(p.isBot),
           isHost: room.hostSeat === p.seat,
           isMe: p.seat === player.seat,
         })),
@@ -275,6 +305,7 @@ export class RoomStore {
     const view = viewFor(room.game, player.seat);
     view.players.forEach((p, i) => {
       p.connected = room.players[i]?.connected ?? false;
+      p.isBot = Boolean(room.players[i]?.isBot);
     });
     view.roomCode = room.code;
     view.isHost = room.hostSeat === player.seat;

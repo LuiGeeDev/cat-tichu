@@ -6,6 +6,7 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import { RoomStore, StoreError } from './rooms.js';
 import { GameError } from '../shared/tichu/engine.js';
+import { botNeedsAction, decideBotAction } from './bot.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -58,12 +59,43 @@ function sendError(ws, message, fatal = false) {
   send(ws, { t: 'error', message, fatal });
 }
 
+const botTimers = new Map();
+
+function scheduleBot(room) {
+  if (!room?.bot || !room.game || botTimers.has(room.code)) return;
+  const bot = room.players.find((p) => p.isBot);
+  if (!bot) return;
+  const view = store.serialize(room, bot);
+  if (!botNeedsAction(view)) return;
+
+  const timer = setTimeout(() => {
+    botTimers.delete(room.code);
+    if (!store.getRoom(room.code) || !room.game) return;
+    const current = store.serialize(room, bot);
+    if (!botNeedsAction(current)) return;
+    const action = decideBotAction(current);
+    if (!action) return;
+    try {
+      const result = store.handleAction(room, bot, {
+        ...action,
+        actionId: `bot-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      });
+      if (!result.duplicate) broadcast(room);
+    } catch (err) {
+      console.error('[cat-tichu] bot error:', err.message);
+    }
+  }, 700 + Math.floor(Math.random() * 500));
+
+  botTimers.set(room.code, timer);
+}
+
 function broadcast(room) {
   for (const player of room.players) {
     if (player.socket && player.socket.readyState === player.socket.OPEN) {
       send(player.socket, { t: 'state', view: store.serialize(room, player) });
     }
   }
+  scheduleBot(room);
 }
 
 function attach(ws, room, player) {
@@ -207,7 +239,15 @@ const heartbeat = setInterval(() => {
   }
 }, 25000);
 
-const cleaner = setInterval(() => store.cleanup(), 10 * 60 * 1000);
+const cleaner = setInterval(() => {
+  store.cleanup();
+  for (const [code, timer] of botTimers) {
+    if (!store.getRoom(code)) {
+      clearTimeout(timer);
+      botTimers.delete(code);
+    }
+  }
+}, 10 * 60 * 1000);
 
 server.listen(PORT, HOST, () => {
   console.log(`[cat-tichu] 서버 실행 중: http://localhost:${PORT}`);

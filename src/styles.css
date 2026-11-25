@@ -516,7 +516,8 @@ a {
   transform: translateY(-15px);
   border-color: var(--orange-deep);
   box-shadow: 0 8px 0 rgba(201, 130, 42, 0.22), 0 16px 24px rgba(122, 82, 64, 0.18);
-  z-index: 6;
+  outline: 2px solid rgba(217, 138, 43, 0.5);
+  outline-offset: -2px;
 }
 
 .card.is-selected.is-clickable:hover {
@@ -921,6 +922,17 @@ a {
 .tag--host {
   background: #efe6f8;
   color: #7a4fa0;
+}
+
+.tag--bot {
+  background: #e4f0e6;
+  color: #3d7552;
+}
+
+.bot-status {
+  color: var(--jade);
+  font-size: 11.5px;
+  font-weight: 700;
 }
 
 .online {
@@ -1382,6 +1394,11 @@ a {
   color: var(--red);
 }
 
+.badge--bot {
+  background: var(--jade-soft);
+  color: #3d7552;
+}
+
 .badge--points {
   background: var(--jade-soft);
   color: #3d7552;
@@ -1469,6 +1486,32 @@ a {
   gap: 6px;
   color: rgba(122, 82, 64, 0.45);
   font-size: 13px;
+}
+
+.mat__dog {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  max-width: 100%;
+  animation: pop 0.3s ease;
+}
+
+.mat__dog .card {
+  transform: rotate(-7deg);
+}
+
+.mat__dog-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.mat__dog-text b {
+  font-size: 14px;
+  color: var(--brown);
 }
 
 .mat__passes {
@@ -2252,6 +2295,11 @@ a {
   color: var(--ink);
 }
 
+.log__item--dog {
+  color: #8a5a1c;
+  font-weight: 700;
+}
+
 .log__item--tichu,
 .log__item--wish {
   color: #b4536e;
@@ -2511,7 +2559,7 @@ a {
   }
 
   .hand .card + .card {
-    margin-left: -34px;
+    margin-left: -30px;
   }
 
   .home__cats {
@@ -2560,6 +2608,17 @@ a {
   .mat {
     min-height: clamp(150px, 30vh, 260px);
     border-radius: 20px;
+  }
+
+  .mat__cards {
+    flex-wrap: wrap;
+    gap: 4px 2px;
+    overflow-x: visible;
+    padding: 4px 2px;
+  }
+
+  .mat__cards .card + .card {
+    margin-left: 0;
   }
 
   .exchange__slots {
@@ -2654,23 +2713,47 @@ a {
     font-size: 11px;
   }
 
+  .mat__dog {
+    gap: 6px;
+  }
+
+  .mat__dog-text {
+    font-size: 11px;
+  }
+
+  .mat__dog-text b {
+    font-size: 12.5px;
+  }
+
   .card--lg {
-    --w: 56px;
-    --h: 82px;
+    --w: 50px;
+    --h: 72px;
   }
 
   .card--md {
-    --w: 44px;
-    --h: 64px;
+    --w: 40px;
+    --h: 58px;
   }
 
   .hand {
-    min-height: calc(82px + 22px);
-    padding-top: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    min-height: 180px;
+    padding: 12px 8px 6px;
+    overflow-x: hidden;
   }
 
   .hand .card + .card {
-    margin-left: -33px;
+    margin-left: 0;
+  }
+
+  .hand .card:nth-child(even) {
+    transform: none;
+  }
+
+  .hand .card.is-selected {
+    transform: translateY(-6px);
   }
 
   .modal {

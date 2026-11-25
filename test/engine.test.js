@@ -249,6 +249,13 @@ test('개는 파트너에게 선을 넘긴다', () => {
   applyAction(game, 0, { type: 'play', cards: ['dog'] });
   assert.equal(game.turn, 2);
   assert.equal(game.hands[0].length, 1);
+
+  const view = viewFor(game, 1);
+  assert.equal(view.lastDog.seat, 0);
+  assert.equal(view.lastDog.to, 2);
+  assert.equal(view.lastDog.card.id, 'dog');
+  assert.equal(view.lastDog.version, view.version, '표시용 버전은 현재 상태와 같다');
+  assert.ok(game.log.some((entry) => entry.kind === 'dog' && entry.text.includes('개를 냈습니다')));
 });
 
 test('세 번 패스하면 트릭이 끝난다', () => {
@@ -265,6 +272,20 @@ test('세 번 패스하면 트릭이 끝난다', () => {
   assert.equal(game.piles[0].length, 1);
   assert.equal(game.turn, 0, '트릭을 가져간 사람이 다시 선');
   assert.equal(game.table, null);
+});
+
+test('티츄와 그랜드 티츄는 한 라운드에 하나만 선언할 수 있다', () => {
+  const players = [0, 1, 2, 3].map((seat) => ({ seat, name: `p${seat}`, catId: seat + 1 }));
+
+  const grand = createGame(players);
+  applyAction(grand, 0, { type: 'callGrand' });
+  assert.equal(viewFor(grand, 0).canCallTichu, false, '그랜드 선언 후 티츄 버튼이 꺼진다');
+  assert.throws(() => applyAction(grand, 0, { type: 'callTichu' }), /이미 티츄/);
+
+  const small = createGame(players);
+  applyAction(small, 0, { type: 'callTichu' });
+  assert.equal(viewFor(small, 0).canCallGrand, false);
+  assert.throws(() => applyAction(small, 0, { type: 'callGrand' }), /이미 티츄/);
 });
 
 test('목표 점수를 설정할 수 있다', () => {

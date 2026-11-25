@@ -72,6 +72,7 @@ export function createGame(players, { target = TARGET_SCORE } = {}) {
     roundResult: null,
     pendingGift: null,
     roundEnding: false,
+    lastDog: null,
     dealer: Math.floor(Math.random() * 4),
     deck: [],
     winner: null,
@@ -99,6 +100,7 @@ function startRound(state) {
   state.roundResult = null;
   state.pendingGift = null;
   state.roundEnding = false;
+  state.lastDog = null;
   state.winner = null;
   state.log = [];
 
@@ -348,14 +350,21 @@ function playCards(state, seat, cardIds, wish) {
 
   if (combo.type === TYPE.DOG) {
     state.piles[seat].push(...combo.cards);
-    addLog(state, `${nameOf(state, seat)}님이 개를 냈습니다. 선이 파트너에게 넘어갑니다.`, seat, 'play');
+    const partner = partnerOf(seat);
+    const next = state.hands[partner].length > 0 ? partner : nextSeatWithCards(state, partner);
+    state.lastDog = { seat, to: next, card: combo.cards[0], version: state.version + 1 };
+    addLog(
+      state,
+      `${nameOf(state, seat)}님이 개를 냈습니다! 선이 ${nameOf(state, next)}님에게 넘어갑니다.`,
+      seat,
+      'dog',
+    );
     if (state.hands[seat].length === 0) finishSeat(state, seat);
     if (state.finishOrder.length >= 3) {
       concludeRound(state);
       return;
     }
-    const partner = partnerOf(seat);
-    state.turn = state.hands[partner].length > 0 ? partner : nextSeatWithCards(state, partner);
+    state.turn = next;
     addLog(state, `${nameOf(state, state.turn)}님이 선을 잡았습니다.`, state.turn, 'turn');
     return;
   }
@@ -436,7 +445,7 @@ export function applyAction(state, seat, action = {}) {
     case 'callGrand': {
       requirePhase(state, PHASE.GRAND);
       if (state.grandReady[seat]) fail('이미 준비를 마쳤습니다.');
-      if (state.calls[seat] === 'grand') fail('이미 그랜드 티츄를 선언했습니다.');
+      if (state.calls[seat]) fail('이미 티츄를 선언했습니다. 한 라운드에 한 번만 선언할 수 있습니다.');
       state.calls[seat] = 'grand';
       addLog(state, `${nameOf(state, seat)}님 그랜드 티츄 선언! (+200 / -200)`, seat, 'tichu');
       break;
@@ -444,7 +453,7 @@ export function applyAction(state, seat, action = {}) {
 
     case 'callTichu': {
       requirePhase(state, PHASE.GRAND, PHASE.EXCHANGE, PHASE.PLAYING);
-      if (state.calls[seat] === 'tichu') fail('이미 티츄를 선언했습니다.');
+      if (state.calls[seat]) fail('이미 티츄를 선언했습니다. 한 라운드에 한 번만 선언할 수 있습니다.');
       if (state.played[seat]) fail('카드를 낸 뒤에는 티츄를 선언할 수 없습니다.');
       state.calls[seat] = 'tichu';
       addLog(state, `${nameOf(state, seat)}님 티츄 선언! (+100 / -100)`, seat, 'tichu');
@@ -562,15 +571,16 @@ export function viewFor(state, seat) {
     mySeat: seat,
     myCall: state.calls[seat],
     hasPlayed: state.played[seat],
-    canCallGrand: state.phase === PHASE.GRAND && !state.grandReady[seat] && state.calls[seat] !== 'grand',
+    canCallGrand: state.phase === PHASE.GRAND && !state.grandReady[seat] && !state.calls[seat],
     canCallTichu:
       [PHASE.GRAND, PHASE.EXCHANGE, PHASE.PLAYING].includes(state.phase) &&
       !state.played[seat] &&
-      state.calls[seat] !== 'tichu',
+      !state.calls[seat],
     mustFulfill: wishInfo.mustFulfill,
     myExchange: state.exchange[seat],
     exchangeCount: state.exchange.filter(Boolean).length,
     pendingGift: state.pendingGift ? { by: state.pendingGift.by } : null,
+    lastDog: state.lastDog ? { ...state.lastDog } : null,
     roundResult: state.roundResult,
     log: state.log.slice(-60),
     isMyTurn: state.phase === PHASE.PLAYING && state.turn === seat,
