@@ -34,7 +34,13 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [fatal, setFatal] = useState('');
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [session, setSession] = useState(readSession);
+  const [session, setSession] = useState(() => {
+    const stored = readSession();
+    const hashed = readInviteCode();
+    return stored?.code && stored?.token && (!hashed || hashed === stored.code.toUpperCase())
+      ? stored
+      : null;
+  });
   const [inviteCode, setInviteCode] = useState(readInviteCode);
 
   const clientRef = useRef(null);
@@ -77,6 +83,7 @@ export default function App() {
           setSession(null);
           setView(null);
           setFatal(message);
+          setInviteCode('');
           window.history.replaceState(null, '', window.location.pathname + window.location.search);
         }
       },
@@ -85,8 +92,14 @@ export default function App() {
     clientRef.current = client;
 
     const stored = readSession();
+    const hashed = readInviteCode();
+    // 초대 링크로 들어온 경우, 저장된 세션이 다른 방이면 자동 복구하지 않고 초대 화면을 보여준다.
     if (stored?.code && stored?.token) {
-      client.join({ code: stored.code, token: stored.token, name: stored.name || '고양이' });
+      if (hashed && hashed !== stored.code.toUpperCase()) {
+        setSession(null);
+      } else {
+        client.join({ code: stored.code, token: stored.token, name: stored.name || '고양이' });
+      }
     }
 
     return () => client.destroy();

@@ -7,7 +7,7 @@ export default function Home({ onCreate, onJoin, inviteCode, error, onOpenRules 
   const [code, setCode] = useState(inviteCode ?? '');
 
   useEffect(() => {
-    if (inviteCode) setCode(inviteCode);
+    setCode(inviteCode ?? '');
   }, [inviteCode]);
 
   const cleanName = name.trim().slice(0, 12);
@@ -16,6 +16,12 @@ export default function Home({ onCreate, onJoin, inviteCode, error, onOpenRules 
   const join = () => {
     if (code.trim().length !== 5) return;
     onJoin(code.trim().toUpperCase(), cleanName || '고양이');
+  };
+
+  // 초대 코드가 채워져 있으면 Enter는 참가, 없으면 새 방 만들기
+  const submitOnEnter = () => {
+    if (code.trim().length === 5) join();
+    else create();
   };
 
   return (
@@ -60,7 +66,7 @@ export default function Home({ onCreate, onJoin, inviteCode, error, onOpenRules 
             placeholder="예: 츄르대장"
             onChange={(event) => setName(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') create();
+              if (event.key === 'Enter') submitOnEnter();
             }}
             autoComplete="nickname"
           />
