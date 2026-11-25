@@ -24,7 +24,17 @@ npm run dev        # 서버(8787) + Vite(5173) 동시 실행
 npm run serve      # vite build 후 node server/index.js (http://localhost:8787)
 ```
 
-## 배포하기
+## 실제 배포 주소
+
+**https://cat-tichu.onrender.com** (Render 무료 플랜, `main` 브랜치 자동 배포)
+
+- 소스: <https://github.com/LuiGeeDev/cat-tichu>
+- `render.yaml` 블루프린트로 Docker 서비스를 생성합니다.
+- 무료 플랜은 15분간 트래픽이 없으면 슬립하므로, 오랜만에 열면 첫 로딩에 약 1분이 걸릴 수 있습니다.
+  게임 중에는 하트비트 트래픽이 있어 슬립하지 않습니다.
+- 배포 상태: `GET https://cat-tichu.onrender.com/healthz`
+
+## 직접 배포하기
 
 이미지 하나로 프론트엔드와 WebSocket 서버가 함께 뜹니다.
 
