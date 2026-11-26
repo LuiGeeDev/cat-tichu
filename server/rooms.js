@@ -178,8 +178,8 @@ export class RoomStore {
         const want = Boolean(action.enabled);
         if (want === room.bot) break;
         if (want) {
-          if (room.players.length !== 3) {
-            throw new StoreError('세 명이 모였을 때만 봇을 추가할 수 있습니다.');
+          if (room.players.length >= MAX_PLAYERS) {
+            throw new StoreError('빈 자리가 없습니다.');
           }
           const used = new Set(room.players.map((p) => p.catId));
           const catId = CAT_IDS.find((id) => !used.has(id)) ?? CAT_IDS[CAT_IDS.length - 1];

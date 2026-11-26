@@ -6,8 +6,7 @@ export default function Lobby({ view, onAction, onLeave, onOpenRules, onCopyInvi
   const me = view.players.find((p) => p.isMe);
   const usedCats = new Set(view.players.map((p) => p.catId));
   const emptyCount = 4 - view.players.length;
-  const humans = view.players.filter((p) => !p.isBot).length;
-  const canToggleBot = view.isHost && (humans === 3 || view.hasBot);
+  const canToggleBot = view.isHost && (emptyCount > 0 || view.hasBot);
   const seats = [0, 1, 2, 3];
 
   return (
@@ -149,7 +148,7 @@ export default function Lobby({ view, onAction, onLeave, onOpenRules, onCopyInvi
             className="btn btn--mini btn--ghost"
             onClick={() => onAction({ type: 'setBot', enabled: !view.hasBot })}
           >
-            {view.hasBot ? '봇 제거' : '봇으로 채우기'}
+            {view.hasBot ? '봇 제거' : '봇 추가'}
           </button>
         )}
         {emptyCount > 0 ? (
